@@ -10,7 +10,7 @@ interface BetControlsProps {
   hasBet: boolean;
 }
 
-const QUICK_STAKES = [100, 200, 500, 1000];
+const QUICK_STAKES = [50, 100, 200, 500];
 
 const BetControls = ({ gameState, onPlaceBet, onCashout, hasBet }: BetControlsProps) => {
   const [betAmount, setBetAmount] = useState(100);
@@ -58,7 +58,7 @@ const BetControls = ({ gameState, onPlaceBet, onCashout, hasBet }: BetControlsPr
         {/* Half / Double */}
         <div className="grid grid-cols-2 gap-2">
           <button
-            onClick={() => setBetAmount(Math.max(10, Math.floor(betAmount / 2)))}
+            onClick={() => setBetAmount(Math.max(50, Math.floor(betAmount / 2)))}
             className="py-1.5 rounded-md text-xs font-semibold bg-secondary text-muted-foreground border border-border hover:text-foreground transition-colors"
           >
             ½
