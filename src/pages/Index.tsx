@@ -13,9 +13,9 @@ const Index = () => {
       <GameHeader />
       <CrashHistory />
 
-      <div className="flex-1 p-4 grid grid-cols-1 lg:grid-cols-[1fr_320px] xl:grid-cols-[320px_1fr_320px] gap-4 max-w-[1600px] mx-auto w-full">
-        {/* Live bets - hidden on smaller screens, shown on xl */}
-        <div className="hidden xl:block">
+      <div className="flex-1 p-4 grid grid-cols-1 lg:grid-cols-[320px_1fr] xl:grid-cols-[320px_1fr_320px] gap-4 max-w-[1600px] mx-auto w-full">
+        {/* Live bets - LEFT side, hidden on smaller screens */}
+        <div className="hidden lg:block">
           <LiveBets />
         </div>
 
@@ -28,7 +28,7 @@ const Index = () => {
           />
         </div>
 
-        {/* Bet controls + mobile live bets */}
+        {/* Bet controls - RIGHT side */}
         <div className="space-y-4">
           <BetControls
             gameState={gameState}
@@ -51,7 +51,7 @@ const Index = () => {
           )}
 
           {/* Live bets on smaller screens */}
-          <div className="xl:hidden">
+          <div className="lg:hidden">
             <LiveBets />
           </div>
         </div>
