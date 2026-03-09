@@ -4,6 +4,7 @@ import MultiplierDisplay from "@/components/MultiplierDisplay";
 import BetControls from "@/components/BetControls";
 import LiveBets from "@/components/LiveBets";
 import LiveChat from "@/components/LiveChat";
+import Leaderboard from "@/components/Leaderboard";
 import { useCrashGame } from "@/hooks/useCrashGame";
 import { useGameSounds } from "@/hooks/useGameSounds";
 import { useEffect, useRef } from "react";
