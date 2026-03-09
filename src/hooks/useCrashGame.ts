@@ -1,4 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from "react";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/contexts/AuthContext";
 
 type GameState = "waiting" | "running" | "crashed";
 
@@ -18,14 +20,90 @@ export function useCrashGame() {
   const [crashHistory, setCrashHistory] = useState<number[]>([]);
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
   const startTimeRef = useRef(0);
+  const betSavedRef = useRef(false);
+  const { user, refreshBalance } = useAuth();
 
   const generateCrashPoint = () => {
-    // Simple provably-fair-ish crash point generation
     const r = Math.random();
-    // House edge ~3%
     const crash = Math.max(1.0, 1 / (1 - r) * 0.97);
-    return Math.min(crash, 100); // cap at 100x
+    return Math.min(crash, 100);
   };
+
+  // Save bet result to database
+  const saveBetResult = useCallback(async (bet: Bet, crashed: boolean) => {
+    if (!user || betSavedRef.current) return;
+    betSavedRef.current = true;
+
+    const cashoutMult = bet.cashedOut ? bet.cashoutMultiplier : null;
+    const profit = bet.cashedOut && cashoutMult
+      ? bet.amount * cashoutMult - bet.amount
+      : -bet.amount;
+
+    try {
+      // Save bet history
+      await supabase.from("bet_history").insert({
+        user_id: user.id,
+        bet_amount: bet.amount,
+        cashout_multiplier: cashoutMult,
+        crashed: crashed && !bet.cashedOut,
+        profit,
+      });
+
+      // Update balance: if cashed out, add winnings back
+      if (bet.cashedOut && cashoutMult) {
+        const winnings = bet.amount * cashoutMult;
+        const { data: balanceData } = await supabase
+          .from("balances")
+          .select("amount")
+          .eq("user_id", user.id)
+          .single();
+        if (balanceData) {
+          await supabase
+            .from("balances")
+            .update({ amount: Number(balanceData.amount) + winnings })
+            .eq("user_id", user.id);
+        }
+
+        // Update leaderboard
+        const { data: profile } = await supabase
+          .from("profiles")
+          .select("username")
+          .eq("user_id", user.id)
+          .single();
+        const username = profile?.username || "Player";
+        const today = new Date().toISOString().split("T")[0];
+
+        const { data: existing } = await supabase
+          .from("leaderboard_entries")
+          .select("*")
+          .eq("user_id", user.id)
+          .eq("date", today)
+          .single();
+
+        if (existing) {
+          await supabase
+            .from("leaderboard_entries")
+            .update({
+              best_multiplier: Math.max(Number(existing.best_multiplier), cashoutMult),
+              total_winnings: Number(existing.total_winnings) + winnings,
+            })
+            .eq("id", existing.id);
+        } else {
+          await supabase.from("leaderboard_entries").insert({
+            user_id: user.id,
+            username,
+            best_multiplier: cashoutMult,
+            total_winnings: winnings,
+            date: today,
+          });
+        }
+      }
+
+      await refreshBalance();
+    } catch (err) {
+      console.error("Failed to save bet:", err);
+    }
+  }, [user, refreshBalance]);
 
   const startRound = useCallback(() => {
     const cp = generateCrashPoint();
@@ -33,20 +111,19 @@ export function useCrashGame() {
     setMultiplier(1.0);
     setGameState("running");
     setRoundCount((c) => c + 1);
+    betSavedRef.current = false;
     startTimeRef.current = Date.now();
 
     intervalRef.current = setInterval(() => {
       const elapsed = (Date.now() - startTimeRef.current) / 1000;
-      // Exponential growth: starts slow, accelerates
       const newMult = Math.pow(Math.E, elapsed * 0.15);
-      
+
       if (newMult >= cp) {
         setMultiplier(cp);
         setGameState("crashed");
         setCrashHistory((prev) => [Math.round(cp * 100) / 100, ...prev].slice(0, 20));
         if (intervalRef.current) clearInterval(intervalRef.current);
-        
-        // Auto-restart after 3s
+
         setTimeout(() => {
           setGameState("waiting");
           setCurrentBet(null);
@@ -67,11 +144,18 @@ export function useCrashGame() {
       currentBet.autoCashout &&
       multiplier >= currentBet.autoCashout
     ) {
-      setCurrentBet((prev) =>
-        prev ? { ...prev, cashedOut: true, cashoutMultiplier: multiplier } : null
-      );
+      const updatedBet = { ...currentBet, cashedOut: true, cashoutMultiplier: multiplier };
+      setCurrentBet(updatedBet);
+      saveBetResult(updatedBet, false);
     }
-  }, [multiplier, gameState, currentBet]);
+  }, [multiplier, gameState, currentBet, saveBetResult]);
+
+  // Save loss when crashed without cashout
+  useEffect(() => {
+    if (gameState === "crashed" && currentBet && !currentBet.cashedOut) {
+      saveBetResult(currentBet, true);
+    }
+  }, [gameState, currentBet, saveBetResult]);
 
   // Start first round
   useEffect(() => {
@@ -83,19 +167,39 @@ export function useCrashGame() {
   }, [startRound]);
 
   const placeBet = useCallback(
-    (amount: number, autoCashout: number | null) => {
+    async (amount: number, autoCashout: number | null) => {
       if (gameState === "running") return;
+
+      // Deduct balance immediately
+      if (user) {
+        const { data: balanceData } = await supabase
+          .from("balances")
+          .select("amount")
+          .eq("user_id", user.id)
+          .single();
+        if (balanceData) {
+          const newBalance = Number(balanceData.amount) - amount;
+          if (newBalance < 0) return; // Insufficient funds
+          await supabase
+            .from("balances")
+            .update({ amount: newBalance })
+            .eq("user_id", user.id);
+          await refreshBalance();
+        }
+      }
+
+      betSavedRef.current = false;
       setCurrentBet({ amount, autoCashout, cashedOut: false, cashoutMultiplier: null });
     },
-    [gameState]
+    [gameState, user, refreshBalance]
   );
 
   const cashout = useCallback(() => {
     if (gameState !== "running" || !currentBet || currentBet.cashedOut) return;
-    setCurrentBet((prev) =>
-      prev ? { ...prev, cashedOut: true, cashoutMultiplier: multiplier } : null
-    );
-  }, [gameState, currentBet, multiplier]);
+    const updatedBet = { ...currentBet, cashedOut: true, cashoutMultiplier: multiplier };
+    setCurrentBet(updatedBet);
+    saveBetResult(updatedBet, false);
+  }, [gameState, currentBet, multiplier, saveBetResult]);
 
   return {
     gameState,

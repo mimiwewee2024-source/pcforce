@@ -35,20 +35,24 @@ const getRankIcon = (rank: number) => {
 const Leaderboard = () => {
   const [entries, setEntries] = useState<LeaderboardEntry[]>(MOCK_LEADERBOARD);
 
+  const fetchLeaderboard = async () => {
+    const today = new Date().toISOString().split("T")[0];
+    const { data } = await supabase
+      .from("leaderboard_entries")
+      .select("id, username, best_multiplier, total_winnings")
+      .eq("date", today)
+      .order("best_multiplier", { ascending: false })
+      .limit(10);
+    if (data && data.length > 0) {
+      setEntries(data);
+    }
+  };
+
   useEffect(() => {
-    const fetchLeaderboard = async () => {
-      const today = new Date().toISOString().split("T")[0];
-      const { data } = await supabase
-        .from("leaderboard_entries")
-        .select("id, username, best_multiplier, total_winnings")
-        .eq("date", today)
-        .order("best_multiplier", { ascending: false })
-        .limit(10);
-      if (data && data.length > 0) {
-        setEntries(data);
-      }
-    };
     fetchLeaderboard();
+    // Refresh leaderboard every 10 seconds
+    const interval = setInterval(fetchLeaderboard, 10000);
+    return () => clearInterval(interval);
   }, []);
 
   return (
