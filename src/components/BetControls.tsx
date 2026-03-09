@@ -209,6 +209,21 @@ const BetControls = ({ gameState, onPlaceBet, onCashout, hasBet }: BetControlsPr
         >
           Cash Out
         </button>
+      ) : betPhase === "queued" ? (
+        <div className="space-y-2">
+          <div className="bg-gaming-green/10 border border-gaming-green/30 rounded-xl p-4 text-center space-y-1">
+            <p className="text-xs text-gaming-green uppercase tracking-wider font-semibold animate-pulse">Bet Queued</p>
+            <p className="text-sm text-foreground font-mono font-bold">KES {betAmount.toLocaleString()}</p>
+            <p className="text-xs text-muted-foreground">Activates when next round starts</p>
+          </div>
+          <button
+            onClick={handleCancel}
+            className="w-full py-3 rounded-xl font-bold text-sm uppercase tracking-wider bg-destructive/20 text-destructive border border-destructive/30 transition-all hover:bg-destructive/30 active:scale-[0.98] flex items-center justify-center gap-2"
+          >
+            <X className="w-4 h-4" />
+            Cancel Bet
+          </button>
+        </div>
       ) : countdown !== null ? (
         <div className="space-y-2">
           {/* Countdown progress */}
