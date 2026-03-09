@@ -4,6 +4,7 @@ import MultiplierDisplay from "@/components/MultiplierDisplay";
 import BetControls from "@/components/BetControls";
 import LiveBets from "@/components/LiveBets";
 import LiveChat from "@/components/LiveChat";
+import Leaderboard from "@/components/Leaderboard";
 import { useCrashGame } from "@/hooks/useCrashGame";
 import { useGameSounds } from "@/hooks/useGameSounds";
 import { useEffect, useRef } from "react";
@@ -42,6 +43,7 @@ const Index = () => {
         {/* Live bets + Chat - LEFT side (hidden on mobile) */}
         <div className="hidden lg:flex lg:flex-col gap-3 md:gap-4 overflow-hidden">
           <LiveBets roundKey={roundCount} />
+          <Leaderboard />
           <LiveChat />
         </div>
 
@@ -80,6 +82,7 @@ const Index = () => {
         {/* Mobile: stacked bets + chat below controls */}
         <div className="lg:hidden space-y-3 col-span-1">
           <LiveBets roundKey={roundCount} />
+          <Leaderboard />
           <LiveChat />
         </div>
       </div>
