@@ -103,6 +103,7 @@ export function useCrashGame() {
     crashPoint,
     currentBet,
     roundCount,
+    crashHistory,
     placeBet,
     cashout,
   };
