@@ -79,7 +79,7 @@ const Index = () => {
 
         {/* Mobile: stacked bets + chat below controls */}
         <div className="lg:hidden space-y-3 col-span-1">
-          <LiveBets />
+          <LiveBets roundKey={roundCount} />
           <LiveChat />
         </div>
       </div>
