@@ -40,6 +40,7 @@ const BetControls = ({ gameState, onPlaceBet, onCashout, hasBet }: BetControlsPr
       navigate("/auth");
       return;
     }
+    if (gameState !== "waiting") return;
     const cashout = autoCashoutEnabled ? parseFloat(autoCashout) : null;
     pendingBetRef.current = { amount: betAmount, cashout };
     setCountdown(COUNTDOWN_SECONDS);
