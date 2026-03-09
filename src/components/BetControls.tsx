@@ -14,7 +14,7 @@ interface BetControlsProps {
 }
 
 const QUICK_STAKES = [50, 100, 200, 500];
-const COUNTDOWN_SECONDS = 5;
+const COUNTDOWN_SECONDS = 3;
 
 const BetControls = ({ gameState, onPlaceBet, onCashout, hasBet }: BetControlsProps) => {
   const [betAmount, setBetAmount] = useState(100);
@@ -40,6 +40,7 @@ const BetControls = ({ gameState, onPlaceBet, onCashout, hasBet }: BetControlsPr
       navigate("/auth");
       return;
     }
+    if (gameState !== "waiting") return;
     const cashout = autoCashoutEnabled ? parseFloat(autoCashout) : null;
     pendingBetRef.current = { amount: betAmount, cashout };
     setCountdown(COUNTDOWN_SECONDS);
